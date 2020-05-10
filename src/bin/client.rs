@@ -69,7 +69,6 @@ async fn handle_replies(from_server: net::TcpStream) -> Result<(), Box<dyn Error
     // JSON serialization of a `Reply`.
     let mut from_server = io::BufReader::new(from_server).lines().fuse();
     while let Some(reply_json) = from_server.next().await {
-        eprintln!("handle_replies actually got an item: {:?}", reply_json);
         let reply_json = reply_json?;
         // Parse the JSON into a `Reply` value.
         let reply: Reply = serde_json::from_str(&reply_json)?;
@@ -82,7 +81,6 @@ async fn handle_replies(from_server: net::TcpStream) -> Result<(), Box<dyn Error
             }
         }
     }
-    eprintln!("handle_replies exiting loop");
 
     Ok(())
 }

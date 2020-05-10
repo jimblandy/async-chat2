@@ -11,7 +11,6 @@ pub type ChatResult<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 pub async fn send_as_json<V: Serialize>(socket: &mut net::TcpStream, value: &V) -> ChatResult<()> {
     // Serialize `value` as JSON.
     let mut json = serde_json::to_string(&value)?;
-    eprintln!("Transmitting: {}", json);
     json.push('\n');
     socket.write_all(json.as_bytes()).await?;
     Ok(())
@@ -29,7 +28,6 @@ pub async fn log_socket_error<F, Fut>(socket: net::TcpStream, body: F)
     use std::borrow::Cow;
 
     let addr_result = socket.peer_addr();
-    eprintln!("in log_socket_error for {:?}", addr_result);
     if let Err(error) = body(socket).await {
         // Convert the address to printable form, if we were able to get it.
         let printable_addr = match addr_result {
@@ -39,5 +37,4 @@ pub async fn log_socket_error<F, Fut>(socket: net::TcpStream, body: F)
 
         eprintln!("Error for client {}: {}", printable_addr, error);
     }
-    eprintln!("log_socket_error returning");
 }
