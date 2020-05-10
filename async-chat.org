@@ -1,0 +1,12 @@
+* To-do
+- [ ] rexamine all function names
+- [ ] use 'socket', not 'connection'
+- [ ] make client print local addr
+- [ ] rustfmt
+- [ ] test on mac
+- [ ] simplify log_socket_error
+  - Yes, it's 'production-quality' to include the socket name, but the
+    complexity is a distraction.
+* Things to test
+- server drops group member when client closes connection
+- server drops group member when send fails
