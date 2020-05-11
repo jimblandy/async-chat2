@@ -1,8 +1,9 @@
-use async_chat::{Request, Reply, utils};
+use async_chat::{utils, Reply, Request};
+use async_std::prelude::FutureExt;
 use async_std::prelude::*;
 use async_std::{io, net, task};
 use std::error::Error;
-use async_std::prelude::FutureExt;
+use std::sync::Arc;
 
 /// Given a string `input`, return `Some((token, rest))`, where `token` is the
 /// first run of non-whitespace characters in `input`, and `rest` is the rest of
@@ -17,7 +18,7 @@ fn next_token(mut input: &str) -> Option<(&str, &str)> {
 
     match input.find(char::is_whitespace) {
         Some(space) => Some((&input[0..space], &input[space..])),
-        None => Some((input, ""))
+        None => Some((input, "")),
     }
 }
 
@@ -27,9 +28,9 @@ fn parse_command(line: &str) -> Option<Request> {
     if command == "send" {
         let (group, rest) = next_token(rest)?;
         let message = rest.trim_start().to_string();
-        return Some(Request::Send {
-            group: group.to_string(),
-            message
+        return Some(Request::Post {
+            group: Arc::new(group.to_string()),
+            message: Arc::new(message),
         });
     } else if command == "join" {
         let (group, rest) = next_token(rest)?;
@@ -37,7 +38,7 @@ fn parse_command(line: &str) -> Option<Request> {
             return None;
         }
         return Some(Request::Join {
-            group: group.to_string()
+            group: Arc::new(group.to_string()),
         });
     } else {
         return None;
@@ -76,8 +77,8 @@ async fn handle_replies(from_server: net::TcpStream) -> Result<(), Box<dyn Error
             Reply::Message { group, message } => {
                 println!("#{}: {}", group, message);
             }
-            Reply::Dropped { count } => {
-                println!("warning: {} messages dropped", count);
+            Reply::Error { message } => {
+                println!("error from server: {}", message);
             }
         }
     }

@@ -11,6 +11,9 @@ futures = "0.3"
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
 
+# For tokio::sync::oneshot.
+tokio = { version = "0.2", features = ["sync"] }
+
 [dependencies.async-std]
 git = "https://github.com/async-rs/async-std.git"
 rev = "1214bc2" # https://github.com/async-rs/async-std/issues/771

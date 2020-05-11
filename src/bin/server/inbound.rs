@@ -1,36 +1,70 @@
-//! Receiving and processing messages from clients.
+//! A task that processes requests from a client.
 
 use async_chat::Request;
 use async_std::prelude::*;
 use async_std::{io, net};
+use std::collections::HashMap;
 use std::sync::Arc;
+use tokio::sync::oneshot;
 
-
-use crate::groups::Groups;
-use crate::outbound::OutboundQueue;
+use crate::group;
+use crate::manager;
+use crate::outbound;
 use crate::utils::ChatResult;
 
-pub async fn serve_connection(socket: net::TcpStream, groups: Arc<Groups>) -> ChatResult<()> {
-    // Create a queue of messages headed back to the client.
-    let outbound_queue = Arc::new(OutboundQueue::new(socket.clone()));
+/// Handle a single client's connection.
+pub async fn serve_connection(
+    socket: net::TcpStream,
+    manager: manager::CommandQueue,
+) -> ChatResult<()> {
+    // Start an outbound task.
+    let outbound = outbound::new(socket.clone());
 
-    // Process one line at a time from the server. Each line should contain the
-    // JSON serialization of a `Request`.
+    // A table of the chat groups we're in.
+    let mut joined: HashMap<Arc<String>, group::CommandQueue> = HashMap::new();
+
+    // Process `Request` values from the client. The client should send them in
+    // JSON form, one per line.
     let mut from_client = io::BufReader::new(socket).lines();
     while let Some(request_json) = from_client.next().await {
         let request_json = request_json?;
-        // Parse the JSON into a `Request` value.
-        let request: Request = serde_json::from_str(&request_json)?;
-        match request {
-            Request::Join { group: group_name } => {
-                let group_name = Arc::new(group_name);
-                let group = groups.get_or_create(group_name);
-                group.join(&outbound_queue);
+        // Parse the JSON into a `Request` value, and handle it.
+        match serde_json::from_str::<Request>(&request_json)? {
+            // Send a message to a group we have joined.
+            Request::Post {
+                group: group_name,
+                message,
+            } => {
+                if let Some(group) = joined.get(&group_name) {
+                    group.send(group::Command::Post { message }).await;
+                } else {
+                    outbound
+                        .send(outbound::Command::Error {
+                            message: format!("Not a member of '{}'", group_name),
+                        })
+                        .await;
+                }
             }
-            Request::Send { group: group_name, message} => {
-                let group_name = Arc::new(group_name);
-                let group = groups.get_or_create(group_name);
-                group.send(message);
+
+            // Join a new group.
+            Request::Join { group: group_name } => {
+                // Create a one-shot channel for the group manager's reply.
+                let (tx, rx) = oneshot::channel();
+
+                // Ask the manager to add us to the group, and send us back a
+                // handle on `tx` that we can use to post messages to the group.
+                manager
+                    .send(manager::Command::Join {
+                        group: group_name.clone(),
+                        member: outbound.clone(),
+                        return_group: tx,
+                    })
+                    .await;
+
+                // The manager sends us a Sender<group::Command> which we can
+                // now use to post to the group.
+                let group = rx.await.unwrap();
+                joined.insert(group_name, group);
             }
         }
     }

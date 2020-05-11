@@ -1,5 +1,7 @@
 * To-do
-- [ ] rexamine all function names
+- [ ] import from `std` or `async_std` consistently
+- [ ] re-examine all function names
+- [ ] check panic handling
 - [ ] use 'socket', not 'connection'
 - [ ] make client print local addr
 - [ ] rustfmt

@@ -1,4 +1,4 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 pub mod utils;
@@ -7,10 +7,13 @@ pub mod utils;
 #[derive(Debug, Deserialize, Serialize)]
 pub enum Request {
     /// Please forward messages sent to the given `group` to this client.
-    Join { group: String },
+    Join { group: Arc<String> },
 
-    /// Please send `message` to `group`.
-    Send { group: String, message: String },
+    /// Post `message` to `group`.
+    Post {
+        group: Arc<String>,
+        message: Arc<String>,
+    },
 }
 
 /// A reply from the server to a specific client.
@@ -22,9 +25,11 @@ pub enum Reply {
     /// As used in the server, the group name and message are often being sent
     /// to every group member simultaneously. Using `Arc` here lets all this
     /// activity share a single copy of the message.
-    Message { group: Arc<String>, message: Arc<String> },
+    Message {
+        group: Arc<String>,
+        message: Arc<String>,
+    },
 
-    /// We were forced to drop `count` messages because the queue was full. This
-    /// reply takes the place of the dropped messages in the reply stream.
-    Dropped { count: usize },
+    /// An error occurred.
+    Error { message: String },
 }
