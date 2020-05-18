@@ -74,7 +74,7 @@ async fn handle_replies(from_server: net::TcpStream) -> ChatResult<()> {
         let reply = reply?;
         match reply {
             Reply::Message { group, message } => {
-                println!("#{}: {}", group, message);
+                println!("message posted to {}: {}", group, message);
             }
             Reply::Error { message } => {
                 println!("error from server: {}", message);
