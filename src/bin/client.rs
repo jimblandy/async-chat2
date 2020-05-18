@@ -25,7 +25,7 @@ fn next_token(mut input: &str) -> Option<(&str, &str)> {
 /// Parse a line (presumably read from the standard input) as a `Request`.
 fn parse_command(line: &str) -> Option<Request> {
     let (command, rest) = next_token(line)?;
-    if command == "send" {
+    if command == "post" {
         let (group, rest) = next_token(rest)?;
         let message = rest.trim_start().to_string();
         return Some(Request::Post {
