@@ -5,8 +5,9 @@ use async_std::prelude::*;
 use serde::Serialize;
 use std::error::Error;
 
-/// Our standard `Result` type, with a fully general `Error`.
-pub type ChatResult<T> = Result<T, Box<dyn Error>>;
+/// Our crate's `Error` and `Result` type, designed for flexibility.
+pub type ChatError = Box<dyn Error + Send + Sync + 'static>;
+pub type ChatResult<T> = Result<T, ChatError>;
 
 /// Given a value that can be serialized, transmit it on `socket`.
 pub async fn send_as_json<V: Serialize>(socket: &mut net::TcpStream, value: &V) -> ChatResult<()> {
