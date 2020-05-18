@@ -36,7 +36,5 @@ where
 {
     if let Err(err) = future.await {
         eprintln!("Error: {}", err);
-    } else {
-        eprintln!("exiting successfully");
     }
 }

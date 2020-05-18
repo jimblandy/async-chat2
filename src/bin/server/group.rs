@@ -29,23 +29,19 @@ pub fn new(name: Arc<String>) -> CommandQueue {
 }
 
 async fn handle_commands(rx: sync::Receiver<Command>, group_name: Arc<String>) -> ChatResult<()> {
-    let mut next_id = 0;
     let mut members = Vec::new();
 
     while let Ok(command) = rx.recv().await {
         match command {
             Command::AddMember { member } => {
-                next_id += 1;
-                members.push((member, next_id));
-                eprintln!("adding member {}", next_id);
+                members.push(member);
             }
 
             Command::Post { message } => {
                 // Send message to all members. If a member's queue is full,
                 // drop the message. If it is disconnected, remove the member
                 // entirely.
-                members.retain(|(ref member, ref id)| {
-                    eprint!("trying to send to {}: ", id);
+                members.retain(|member| {
                     let result = member.try_send(outbound::Command::Message {
                         group: group_name.clone(),
                         message: message.clone(),
@@ -54,19 +50,16 @@ async fn handle_commands(rx: sync::Receiver<Command>, group_name: Arc<String>) -
                     match result {
                         // Message enqueued successfully.
                         Ok(()) => {
-                            eprintln!("ok");
                             true
                         }
 
                         // Queue was full. Drop message for that client.
                         Err(sync::TrySendError::Full(_)) => {
-                            eprintln!("full");
                             true
                         }
 
                         // Client has exited. Remove client from members.
                         Err(sync::TrySendError::Disconnected(_)) => {
-                            eprintln!("disconnected; dropping");
                             false
                         }
                     }

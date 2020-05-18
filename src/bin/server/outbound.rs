@@ -27,11 +27,7 @@ pub fn new(to_client: net::TcpStream) -> CommandQueue {
     // Create the channel on which we'll receive commands.
     let (tx, rx) = sync::channel(1);
 
-    task::spawn(utils::log_error(async {
-        let result = handle_commands(rx, to_client).await;
-        eprintln!("outbound quitting");
-        result
-    }));
+    task::spawn(utils::log_error(handle_commands(rx, to_client)));
 
     tx
 }
@@ -42,7 +38,6 @@ async fn handle_commands(
     mut to_client: net::TcpStream,
 ) -> ChatResult<()> {
     while let Ok(command) = rx.recv().await {
-        eprintln!("outbound got command: {:?}", command);
         match command {
             Command::Message { group, message } => {
                 let reply = Reply::Message { group, message };
