@@ -1,8 +1,9 @@
-use async_chat::{utils, Reply, Request};
+use async_chat::{Reply, Request};
+use async_chat::utils;
+use async_chat::utils::ChatResult;
 use async_std::prelude::FutureExt;
 use async_std::prelude::*;
 use async_std::{io, net, task};
-use std::error::Error;
 use std::sync::Arc;
 
 /// Given a string `input`, return `Some((token, rest))`, where `token` is the
@@ -45,7 +46,7 @@ fn parse_command(line: &str) -> Option<Request> {
     }
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> ChatResult<()> {
     let address = std::env::args().nth(1).expect("Usage: client ADDRESS");
 
     task::block_on(async {
@@ -65,14 +66,12 @@ fn main() -> Result<(), Box<dyn Error>> {
     })
 }
 
-async fn handle_replies(from_server: net::TcpStream) -> Result<(), Box<dyn Error>> {
-    // Process one line at a time from the server. Each line should contain the
-    // JSON serialization of a `Reply`.
-    let mut from_server = io::BufReader::new(from_server).lines().fuse();
-    while let Some(reply_json) = from_server.next().await {
-        let reply_json = reply_json?;
-        // Parse the JSON into a `Reply` value.
-        let reply: Reply = serde_json::from_str(&reply_json)?;
+async fn handle_replies(from_server: net::TcpStream) -> ChatResult<()> {
+    // Process `Reply` values from the server.
+    let mut from_server = utils::receive_as_json::<Reply>(from_server);
+    while let Some(reply) = from_server.next().await {
+        let _: ChatResult<Reply> = reply;
+        let reply = reply?;
         match reply {
             Reply::Message { group, message } => {
                 println!("#{}: {}", group, message);
@@ -86,8 +85,8 @@ async fn handle_replies(from_server: net::TcpStream) -> Result<(), Box<dyn Error
     Ok(())
 }
 
-async fn send_commands(mut to_server: net::TcpStream) -> Result<(), Box<dyn Error>> {
-    let mut lines = io::BufReader::new(io::stdin()).lines().fuse();
+async fn send_commands(mut to_server: net::TcpStream) -> ChatResult<()> {
+    let mut lines = io::BufReader::new(io::stdin()).lines();
     while let Some(line) = lines.next().await {
         let line = line?;
         if let Some(request) = parse_command(&line) {
