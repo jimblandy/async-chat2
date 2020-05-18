@@ -1,8 +1,8 @@
 //! A task that processes requests from a client.
 
-use async_chat::Request;
+use async_chat::{Request, utils};
 use async_std::prelude::*;
-use async_std::{io, net};
+use async_std::net;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::oneshot;
@@ -23,13 +23,11 @@ pub async fn serve_connection(
     // A table of the chat groups we're in.
     let mut joined: HashMap<Arc<String>, group::CommandQueue> = HashMap::new();
 
-    // Process `Request` values from the client. The client should send them in
-    // JSON form, one per line.
-    let mut from_client = io::BufReader::new(socket).lines();
-    while let Some(request_json) = from_client.next().await {
-        let request_json = request_json?;
-        // Parse the JSON into a `Request` value, and handle it.
-        match serde_json::from_str::<Request>(&request_json)? {
+    // Process `Request` values from the client.
+    let mut from_client = utils::receive_as_json(socket);
+    while let Some(request) = from_client.next().await {
+        let request = request?;
+        match request {
             // Send a message to a group we have joined.
             Request::Post {
                 group: group_name,
