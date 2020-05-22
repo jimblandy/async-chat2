@@ -17,7 +17,12 @@ tokio = { version = "0.2", features = ["sync"] }
 # Workaround https://github.com/async-rs/async-std/issues/785
 smol = "=0.1.5"
 
+# Debugging
+# smol = { path = "/home/jimb/rust/smol" }
+
 [dependencies.async-std]
 features = ["unstable"]
+#path = "/home/jimb/rust/async-std"
+#version = "1.6.0-beta.1"
 git = "https://github.com/async-rs/async-std.git"
 rev = "1214bc2" # https://github.com/async-rs/async-std/issues/771
