@@ -1,8 +1,9 @@
 //! A task that processes requests from a client.
 
-use async_chat::{Request, utils};
-use async_std::prelude::*;
+use async_chat::utils::{self, ChatResult};
+use async_chat::Request;
 use async_std::net;
+use async_std::prelude::*;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::oneshot;
@@ -10,7 +11,6 @@ use tokio::sync::oneshot;
 use crate::group;
 use crate::manager;
 use crate::outbound;
-use crate::utils::ChatResult;
 
 /// Handle a single client's connection.
 pub async fn serve_connection(
@@ -29,18 +29,12 @@ pub async fn serve_connection(
         let request = request?;
         match request {
             // Send a message to a group we have joined.
-            Request::Post {
-                group: group_name,
-                message,
-            } => {
-                if let Some(group) = joined.get(&group_name) {
-                    group.send(group::Command::Post { message }).await;
+            Request::Post { group, message } => {
+                if let Some(command_queue) = joined.get(&group) {
+                    command_queue.send(group::Command::Post { message }).await;
                 } else {
-                    outbound
-                        .send(outbound::Command::Error {
-                            message: format!("Not a member of '{}'", group_name),
-                        })
-                        .await;
+                    let message = format!("Not a member of '{}'", group);
+                    outbound.send(outbound::Command::Error { message }).await;
                 }
             }
 
@@ -51,16 +45,15 @@ pub async fn serve_connection(
 
                 // Ask the manager to add us to the group, and send us back a
                 // handle on `tx` that we can use to post messages to the group.
-                manager
-                    .send(manager::Command::Join {
-                        group: group_name.clone(),
-                        member: outbound.clone(),
-                        return_group: tx,
-                    })
-                    .await;
+                let command = manager::Command::Join {
+                    group_name: group_name.clone(),
+                    member: outbound.clone(),
+                    return_group: tx,
+                };
+                manager.send(command).await;
 
-                // The manager sends us a Sender<group::Command> which we can
-                // now use to post to the group.
+                // The manager replies with a Sender<group::Command>, which we
+                // can now use to post to the group.
                 let group = rx.await.unwrap();
                 joined.insert(group_name, group);
             }

@@ -1,8 +1,9 @@
 //! Utilities for both clients and servers.
 
-use async_std::{io, net};
 use async_std::prelude::*;
-use serde::{de::DeserializeOwned, ser::Serialize};
+use async_std::{io, net};
+use serde::de::DeserializeOwned;
+use serde::Serialize;
 use std::error::Error;
 
 /// Our crate's `Error` and `Result` type, designed for flexibility.
@@ -10,7 +11,10 @@ pub type ChatError = Box<dyn Error + Send + Sync + 'static>;
 pub type ChatResult<T> = Result<T, ChatError>;
 
 /// Given a value that can be serialized, transmit it on `socket`.
-pub async fn send_as_json<V: Serialize>(socket: &mut net::TcpStream, value: &V) -> ChatResult<()> {
+pub async fn send_as_json<V: Serialize>(
+    socket: &mut net::TcpStream,
+    value: &V,
+) -> ChatResult<()> {
     // Serialize `value` as JSON.
     let mut json = serde_json::to_string(&value)?;
     json.push('\n');
@@ -20,12 +24,14 @@ pub async fn send_as_json<V: Serialize>(socket: &mut net::TcpStream, value: &V) 
 
 /// Read lines from `stream`, parse them as the JSON-serialized form of `V`
 /// values, and return a `Stream` of `ChatResult<V>` values.
-pub fn receive_as_json<V: DeserializeOwned>(socket: net::TcpStream) -> impl Stream<Item=ChatResult<V>> {
+pub fn receive_as_json<V: DeserializeOwned>(
+    socket: net::TcpStream,
+) -> impl Stream<Item = ChatResult<V>> {
     let buffered = io::BufReader::new(socket);
-    buffered.lines().map(|result| {
-        result
-            .map_err(|e| ChatError::from(e))
-            .and_then(|line| serde_json::from_str::<V>(&line).map_err(Into::into))
+    buffered.lines().map(|line_result| -> ChatResult<V> {
+        let line = line_result?;
+        let parsed = serde_json::from_str::<V>(&line)?;
+        Ok(parsed)
     })
 }
 

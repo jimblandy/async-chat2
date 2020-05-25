@@ -28,7 +28,10 @@ pub fn new(name: Arc<String>) -> CommandQueue {
     tx
 }
 
-async fn handle_commands(rx: sync::Receiver<Command>, group_name: Arc<String>) -> ChatResult<()> {
+async fn handle_commands(
+    rx: sync::Receiver<Command>,
+    group_name: Arc<String>,
+) -> ChatResult<()> {
     let mut members = Vec::new();
 
     while let Ok(command) = rx.recv().await {
@@ -42,26 +45,20 @@ async fn handle_commands(rx: sync::Receiver<Command>, group_name: Arc<String>) -
                 // drop the message. If it is disconnected, remove the member
                 // entirely.
                 members.retain(|member| {
-                    let result = member.try_send(outbound::Command::Message {
+                    let result = member.try_send(outbound::Command::Send {
                         group: group_name.clone(),
                         message: message.clone(),
                     });
 
                     match result {
                         // Message enqueued successfully.
-                        Ok(()) => {
-                            true
-                        }
+                        Ok(()) => true,
 
                         // Queue was full. Drop message for that client.
-                        Err(sync::TrySendError::Full(_)) => {
-                            true
-                        }
+                        Err(sync::TrySendError::Full(_)) => true,
 
                         // Client has exited. Remove client from members.
-                        Err(sync::TrySendError::Disconnected(_)) => {
-                            false
-                        }
+                        Err(sync::TrySendError::Disconnected(_)) => false,
                     }
                 });
             }

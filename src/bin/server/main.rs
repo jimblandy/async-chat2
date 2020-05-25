@@ -1,7 +1,6 @@
 //! Asynchronous chat server.
 
-use async_chat::utils;
-use async_chat::utils::ChatResult;
+use async_chat::utils::{self, ChatResult};
 use async_std::prelude::*;
 use async_std::{net, task};
 

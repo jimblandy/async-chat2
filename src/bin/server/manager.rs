@@ -1,7 +1,6 @@
 //! A manager for a list of chat groups.
 
-use async_chat::utils;
-use async_chat::utils::ChatResult;
+use async_chat::utils::{self, ChatResult};
 use async_std::{sync, task};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -20,7 +19,7 @@ pub enum Command {
 
         /// The name of the chat group to join. If the group does not exist,
         /// create it.
-        group: Arc<String>,
+        group_name: Arc<String>,
 
         /// The client would like to post messages as well, so we should
         /// send it the chat group's command queue on this one-shot.
@@ -50,7 +49,7 @@ async fn handle_commands(rx: sync::Receiver<Command>) -> ChatResult<()> {
         match command {
             Command::Join {
                 member,
-                group: group_name,
+                group_name,
                 return_group,
             } => {
                 // Find the group, or create one if it does not exist.
@@ -61,8 +60,8 @@ async fn handle_commands(rx: sync::Receiver<Command>) -> ChatResult<()> {
                 // Add this client to the group.
                 group.send(group::Command::AddMember { member }).await;
 
-                // Send the client a handle to this group, for
-                // posting messages.
+                // Send this group's command queue back to the client, so
+                // it can post messages.
                 let _ = return_group.send(group.clone());
             }
         }

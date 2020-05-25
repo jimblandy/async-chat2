@@ -1,15 +1,15 @@
 //! A task that transmits replies to a client.
 
-use async_chat::utils::ChatResult;
-use async_chat::{utils, Reply};
-use async_std::sync::Arc;
+use async_chat::utils::{self, ChatResult};
+use async_chat::Reply;
 use async_std::{net, sync, task};
+use std::sync::Arc;
 
 /// Commands for an outbound task. There's only one.
 #[derive(Debug)]
 pub enum Command {
     /// The given `message` was sent to the chat group named `group`.
-    Message {
+    Send {
         group: Arc<String>,
         message: Arc<String>,
     },
@@ -39,7 +39,7 @@ async fn handle_commands(
 ) -> ChatResult<()> {
     while let Ok(command) = rx.recv().await {
         match command {
-            Command::Message { group, message } => {
+            Command::Send { group, message } => {
                 let reply = Reply::Message { group, message };
                 utils::send_as_json(&mut to_client, &reply).await?;
             }
