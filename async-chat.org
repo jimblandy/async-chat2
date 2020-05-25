@@ -1,15 +1,4 @@
 * To-do
-- [X] rustfmt
-- [X] make client print local addr - nah
-- [X] simplify log_socket_error
-  - Yes, it's 'production-quality' to include the socket name, but the
-    complexity is a distraction.
-- [X] test on mac
-- [X] import from `std` or `async_std` consistently
-- [X] use 'socket', not 'connection'
-- [X] re-examine all function names
-- [ ] check panic handling
-- [ ] understand genawaiter
 * Things to test
 - server drops group member when client closes connection
 - server drops group member when send fails
